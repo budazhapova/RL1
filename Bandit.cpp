@@ -107,6 +107,10 @@ void Bandit::epsilonGreedy(double epsilon){
                 prc_optimal[0][0][t] += 100.0 / runs;
             if (optimal_choice[1])
                 prc_optimal[0][1][t] += 100.0 / runs;
+
+            // add current reward to total score of this run
+            total_reward[0][0][n] += reward[0];
+            total_reward[0][1][n] += reward[1];
         }
     }
 }
@@ -153,6 +157,10 @@ void Bandit::optimisticInitValues(double alpha, double init){
                 prc_optimal[1][0][t] += 100.0 / runs;
             if (optimal_choice[1])
                 prc_optimal[1][1][t] += 100.0 / runs;
+            
+            // add current reward to the run total
+            total_reward[1][0][n] += reward[0];
+            total_reward[1][1][n] += reward[1];
         }
     }
 }
@@ -213,6 +221,10 @@ void Bandit::reinforcementComparison(double alpha){
                 prc_optimal[2][0][t] += 100.0 / runs;
             if (optimal_choice[1])
                 prc_optimal[2][1][t] += 100.0 / runs;
+
+            // add to total reward of this run
+            total_reward[2][0][n] += reward[0];
+            total_reward[2][1][n] += reward[1];
         }
     }
 }
@@ -230,10 +242,20 @@ void Bandit::outputResults() const
             {
                 file << (bandit == 0 ? "normal_dist" : "bernoulli_dist") << ','
                      << selection << ',' << algorithm_names[algorithm] << ','
-                     /*<< avg_reward_eps_greedy[bandit][selection] << ','
-                     << prc_optimal_eps_greedy[bandit][selection] << '\n';*/
                      << avg_reward[algorithm][bandit][selection] << ','
                      << prc_optimal[algorithm][bandit][selection] << '\n';
+            }
+    file.close();
+
+    file.open("rewards.csv");
+    file << "bandit" << "," << "run" << "," << "algorithm" << "," << "total_reward" << '\n';
+    for (int bandit = 0; bandit < 2; bandit++)
+        for (int run = 0; run < runs; run++)
+            for (int algorithm = 0; algorithm < 3; algorithm++)
+            {
+                file << (bandit == 0 ? "normal_dist" : "bernoulli_dist") << ','
+                     << run << "," << algorithm_names[algorithm] << ","
+                     << total_reward[algorithm][bandit][run] << '\n';
             }
     file.close();
 }

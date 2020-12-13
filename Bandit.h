@@ -23,10 +23,14 @@ class Bandit {
 	// performance statistics for all algorithms -- expand as more algorithms implemented!
 	double avg_reward[3][2][selections] = {0};
 	double prc_optimal[3][2][selections] = {0};
-	/* order of aggregate algorithms in the arrays above:
+
+	/* order of aggregate algorithms (first index of) the score arrays:
 	0 -- epsilon greedy
 	1 -- optimistic epsilon greedy
 	2 -- reinforcement comparison */
+
+	// total reward statistics across 4 algorithms, 2 bandits, all runs
+	double total_reward[3][2][runs] = {0};
 
 	public:
         // reset problems/arms
