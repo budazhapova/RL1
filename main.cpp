@@ -9,7 +9,9 @@ int main(){
     // pass learning rate alpha and initial valuation as argument
     gang.optimisticInitValues(0.1, 5.0);
     // pass learning rate alpha as argument
-    gang.reinforcementComparison(0.05);
+    gang.reinforcementComparison(0.5);
+    // pass exploration rate c
+    gang.upperConfidenceBound(1.1);
     gang.outputResults();
     return 0;
 }

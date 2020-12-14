@@ -139,11 +139,9 @@ void Bandit::optimisticInitValues(double alpha, double init){
             binary_selection = greedyChoice(Q[1]);
 
             reward[0] = normal_rewards[normal_selection](generator);
-            times_taken[0][normal_selection]++;
             optimal_choice[0] = (normal_selection == best_normal_arm);
 
             reward[1] = binary_rewards[binary_selection](generator);
-            times_taken[1][binary_selection]++;
             optimal_choice[1] = (binary_selection == best_binary_arm);
 
             // update estimated rewards Q
@@ -167,7 +165,8 @@ void Bandit::optimisticInitValues(double alpha, double init){
 
 void Bandit::reinforcementComparison(double alpha){
     // random generator to use for action selection later
-    std::default_random_engine generator;
+    std::random_device device;
+    std::default_random_engine generator(device());
 
     for (int n = 0; n < runs; n++){
         this->reset();
@@ -175,7 +174,7 @@ void Bandit::reinforcementComparison(double alpha){
         double ref_reward[2] = {0};
         // keep track of preferences for and probabilities of taking various actions
         double preference[2][arms] = {0};
-        // double probability[2][arms] = {0};
+        
         std::array<double, arms> probability[2];
 
         for (int t = 0; t < selections; t++){
@@ -229,16 +228,96 @@ void Bandit::reinforcementComparison(double alpha){
     }
 }
 
+int Bandit::actionSelectionUCB(const double *Q, int t, int times_taken[], double c){
+    // pick first value as highest arbitrarily, then compare to find actual highest value
+    double highest_value = -99;
+    std::vector<int> best_options = {0};
+
+    // select action based on expected value and times taken w.r.t. total selections
+    for (int choice = 0; choice < arms; choice++){
+        // if action has never been chosen, take it immediately
+        if (times_taken[choice] == 0)
+            return choice;
+        // otherwise, use the action selection formula
+        double action_estimate = 0;
+        action_estimate = Q[choice] + (c * sqrt(log(t) / times_taken[choice]));
+        // if estimate is larger than current best value, replace
+        if (action_estimate > highest_value){
+            highest_value = action_estimate;
+            best_options = {choice};
+        }
+        else if (action_estimate == highest_value)
+            best_options.push_back(choice);
+    }
+    
+    // if only one best choice exists, return it
+    if (best_options.size() == 1)
+    return best_options[0];
+
+    // if there are multiple choices tied, return one of them randomly
+    auto generator = std::default_random_engine(std::random_device{}());
+    int tiebreaker = std::uniform_int_distribution<int>(0, best_options.size() - 1)(generator);
+    return best_options[tiebreaker];
+}
+
+void Bandit::upperConfidenceBound(double c){
+    std::random_device device;
+    std::default_random_engine generator(device());
+
+    for (int n = 0; n < runs; n++){
+        this->reset();
+
+        // expected value and # of times every action was taken
+        double Q [2][arms] = {0};
+        int times_taken [2][arms] = {0};
+
+        for (int t = 0; t < selections; t++){
+            int normal_selection, binary_selection;
+            double reward [2];
+            bool optimal_choice [2];
+
+            normal_selection = actionSelectionUCB(Q[0], t, times_taken[0], c);
+            binary_selection = actionSelectionUCB(Q[1], t, times_taken[1], c);
+
+            reward[0] = normal_rewards[normal_selection](generator);
+            times_taken[0][normal_selection]++;
+            optimal_choice[0] = (normal_selection == best_normal_arm);
+
+            reward[1] = binary_rewards[binary_selection](generator);
+            times_taken[1][binary_selection]++;
+            optimal_choice[1] = (binary_selection == best_binary_arm);
+
+            // update estimated rewards Q
+            Q[0][normal_selection] += (1.0 / (times_taken[0][normal_selection])) *
+                                       (reward[0] - Q[0][normal_selection]);
+            Q[1][binary_selection] += (1.0 / (times_taken[1][binary_selection])) *
+                                        (reward[1] - Q[1][binary_selection]);
+
+            // keep track of averages and optimal choices
+            avg_reward[3][0][t] += reward[0] * 1.0 / runs;
+            avg_reward[3][1][t] += reward[1] * 1.0 / runs;
+            if (optimal_choice[0])
+                prc_optimal[3][0][t] += 100.0 / runs;
+            if (optimal_choice[1])
+                prc_optimal[3][1][t] += 100.0 / runs;
+
+            // add current reward to total score of this run
+            total_reward[3][0][n] += reward[0];
+            total_reward[3][1][n] += reward[1];
+        }
+    }
+}
+
 void Bandit::outputResults() const
 {
-    std::string algorithm_names[3] = {"eps_greedy", "optimistic", "reinforcement_comp"}; // NB! expand later
+    std::string algorithm_names[4] = {"eps_greedy", "optimistic", "reinforcement_comp", "UCB"};
     std::ofstream file;
     file.open("results.csv");
     file << "bandit" << ',' << "selection" << ',' << "algorithm" << ','
          << "average_reward" << ',' << "optimal_percentage" << '\n';
     for (int bandit = 0; bandit < 2; bandit++)
         for (int selection = 0; selection < selections; selection++)
-            for (int algorithm = 0; algorithm < 3; algorithm++) // NB! revise stop condition
+            for (int algorithm = 0; algorithm < 4; algorithm++)
             {
                 file << (bandit == 0 ? "normal_dist" : "bernoulli_dist") << ','
                      << selection << ',' << algorithm_names[algorithm] << ','
@@ -251,7 +330,7 @@ void Bandit::outputResults() const
     file << "bandit" << "," << "run" << "," << "algorithm" << "," << "total_reward" << '\n';
     for (int bandit = 0; bandit < 2; bandit++)
         for (int run = 0; run < runs; run++)
-            for (int algorithm = 0; algorithm < 3; algorithm++)
+            for (int algorithm = 0; algorithm < 4; algorithm++)
             {
                 file << (bandit == 0 ? "normal_dist" : "bernoulli_dist") << ','
                      << run << "," << algorithm_names[algorithm] << ","
