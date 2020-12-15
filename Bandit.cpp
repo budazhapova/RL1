@@ -1,12 +1,14 @@
+#include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include "Bandit.h"
 
 void Bandit::reset(){
     // generator to use with distributions
-    std::random_device device;
-    std::default_random_engine generator(device());
+    // NOTE: random_device can produce same sequences, depending on compiler(?)
+    std::mt19937 generator(std::time(nullptr));
 
     // get means of reward distributions from normal distribution
     std::normal_distribution<double> mean_dist(0, 1);
@@ -19,6 +21,8 @@ void Bandit::reset(){
         normal_rewards[arm] = std::normal_distribution<double>(reward_mean, 1);
         double reward_prob = prob_dist(generator);
         binary_rewards[arm] = std::bernoulli_distribution(reward_prob);
+        // print the mean and sd of the normal arm
+        // std::cout << "mean of arm " << arm  << ": "<< normal_rewards[arm].mean() << std::endl;
     }
 
     // find best choices for normal problem arms and binary problem arms
@@ -58,8 +62,7 @@ int Bandit::greedyChoice(const double *array){
 void Bandit::epsilonGreedy(double epsilon){
     // use <random> distributions to use for choosing greedily with a probability
     // and to determine the random choice
-    std::random_device device;
-    std::default_random_engine generator(device());
+    std::default_random_engine generator(std::time(nullptr));
     std::bernoulli_distribution p_random(epsilon);
     std::uniform_int_distribution<int> random_choice(0, arms - 1);
 
@@ -117,8 +120,7 @@ void Bandit::epsilonGreedy(double epsilon){
 
 void Bandit::optimisticInitValues(double alpha, double init){
     // sets initial estimation to init and updates estimates with the rate alpha
-    std::random_device device;
-    std::default_random_engine generator(device());
+    std::default_random_engine generator(std::time(nullptr));
 
     for (int n = 0; n < runs; n++){
         // same setup reboot as in epsilonGreedy (see above for explanation)
@@ -165,8 +167,7 @@ void Bandit::optimisticInitValues(double alpha, double init){
 
 void Bandit::reinforcementComparison(double alpha){
     // random generator to use for action selection later
-    std::random_device device;
-    std::default_random_engine generator(device());
+    std::default_random_engine generator(std::time(nullptr));
 
     for (int n = 0; n < runs; n++){
         this->reset();
@@ -261,8 +262,7 @@ int Bandit::actionSelectionUCB(const double *Q, int t, int times_taken[], double
 }
 
 void Bandit::upperConfidenceBound(double c){
-    std::random_device device;
-    std::default_random_engine generator(device());
+    std::default_random_engine generator(std::time(nullptr));
 
     for (int n = 0; n < runs; n++){
         this->reset();
