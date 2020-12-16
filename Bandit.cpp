@@ -21,7 +21,8 @@ void Bandit::reset(){
         normal_rewards[arm] = std::normal_distribution<double>(reward_mean, 1);
         double reward_prob = prob_dist(generator);
         binary_rewards[arm] = std::bernoulli_distribution(reward_prob);
-        // print the mean and sd of the normal arm
+        // print the mean and sd of the normal distr bandit arm
+        // NOTE: use for testing randomization
         // std::cout << "mean of arm " << arm  << ": "<< normal_rewards[arm].mean() << std::endl;
     }
 
